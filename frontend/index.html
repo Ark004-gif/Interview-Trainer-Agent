@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IBM AICTE — Interview Trainer Agent</title>
+  <style>
+    /* ── Reset & Variables ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ibm-blue: #0f62fe;
+      --ibm-blue-dark: #0043ce;
+      --ibm-blue-light: #d0e2ff;
+      --ibm-gray-100: #f4f4f4;
+      --ibm-gray-20: #e0e0e0;
+      --ibm-gray-60: #6f6f6f;
+      --ibm-gray-90: #262626;
+      --ibm-green: #198038;
+      --ibm-red: #da1e28;
+      --ibm-teal: #007d79;
+      --ibm-purple: #6929c4;
+      --white: #ffffff;
+      --font: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --radius: 4px;
+      --shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    body {
+      font-family: var(--font);
+      background: var(--ibm-gray-100);
+      color: var(--ibm-gray-90);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--ibm-gray-90);
+      color: var(--white);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 3rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    .header-brand .ibm-logo {
+      background: var(--ibm-blue);
+      color: var(--white);
+      padding: 2px 8px;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+    }
+    .header-status {
+      font-size: 0.75rem;
+      color: #8d8d8d;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--ibm-green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    /* ── Layout ── */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: calc(100vh - 3rem);
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--white);
+      border-right: 1px solid var(--ibm-gray-20);
+      padding: 1.5rem 0;
+      overflow-y: auto;
+    }
+    .sidebar-section-label {
+      padding: 0 1rem 0.5rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--ibm-gray-60);
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      font-size: 0.875rem;
+      color: var(--ibm-gray-90);
+      transition: all 0.15s;
+    }
+    .nav-item:hover { background: var(--ibm-gray-100); }
+    .nav-item.active {
+      background: var(--ibm-blue-light);
+      border-left-color: var(--ibm-blue);
+      color: var(--ibm-blue-dark);
+      font-weight: 600;
+    }
+    .nav-icon { font-size: 1.1rem; width: 1.25rem; text-align: center; }
+    .sidebar-divider { border: none; border-top: 1px solid var(--ibm-gray-20); margin: 1rem 0; }
+
+    /* Session badge */
+    .session-badge {
+      margin: 0 1rem 1rem;
+      padding: 0.75rem;
+      background: var(--ibm-blue-light);
+      border-radius: var(--radius);
+      font-size: 0.75rem;
+      display: none;
+    }
+    .session-badge.visible { display: block; }
+    .session-badge strong { color: var(--ibm-blue-dark); display: block; margin-bottom: 0.25rem; }
+
+    /* ── Content ── */
+    .content {
+      padding: 2rem;
+      overflow-y: auto;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--ibm-gray-20);
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .card-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--ibm-gray-20);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-title { font-size: 1rem; font-weight: 600; color: var(--ibm-gray-90); }
+    .card-subtitle { font-size: 0.75rem; color: var(--ibm-gray-60); margin-top: 0.1rem; }
+    .card-body { padding: 1.5rem; }
+
+    /* ── Page headers ── */
+    .page-header { margin-bottom: 1.5rem; }
+    .page-header h1 { font-size: 1.5rem; font-weight: 600; color: var(--ibm-gray-90); }
+    .page-header p { font-size: 0.875rem; color: var(--ibm-gray-60); margin-top: 0.25rem; }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 1.25rem; }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ibm-gray-60);
+      margin-bottom: 0.35rem;
+    }
+    input[type="text"], input[type="email"],
+    select, textarea {
+      width: 100%;
+      padding: 0.625rem 1rem;
+      border: 1px solid var(--ibm-gray-20);
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      background: var(--white);
+      color: var(--ibm-gray-90);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--ibm-blue);
+      box-shadow: 0 0 0 2px rgba(15,98,254,0.15);
+    }
+    textarea { min-height: 120px; resize: vertical; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--ibm-blue); color: var(--white); }
+    .btn-primary:hover { background: var(--ibm-blue-dark); }
+    .btn-secondary { background: var(--ibm-gray-20); color: var(--ibm-gray-90); }
+    .btn-secondary:hover { background: #c6c6c6; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ibm-blue);
+      border: 1px solid var(--ibm-blue);
+    }
+    .btn-ghost:hover { background: var(--ibm-blue-light); }
+    .btn-danger { background: var(--ibm-red); color: var(--white); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-group { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.6rem;
+      border-radius: 1rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-blue { background: var(--ibm-blue-light); color: var(--ibm-blue-dark); }
+    .badge-green { background: #defbe6; color: var(--ibm-green); }
+    .badge-red { background: #fff1f1; color: var(--ibm-red); }
+    .badge-purple { background: #f6f2ff; color: var(--ibm-purple); }
+    .badge-teal { background: #d9fbfb; color: var(--ibm-teal); }
+
+    /* ── Question Cards ── */
+    .question-card {
+      border: 1px solid var(--ibm-gray-20);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .question-header {
+      padding: 0.875rem 1rem;
+      background: var(--ibm-gray-100);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .question-number {
+      background: var(--ibm-blue);
+      color: var(--white);
+      width: 1.75rem; height: 1.75rem;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .question-text { font-size: 0.9rem; font-weight: 600; line-height: 1.5; flex: 1; }
+    .question-meta { display: flex; gap: 0.5rem; margin-top: 0.35rem; }
+    .question-body {
+      padding: 1rem;
+      display: none;
+    }
+    .question-body.expanded { display: block; }
+    .question-toggle {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--ibm-blue);
+      font-size: 1rem;
+      padding: 0.25rem;
+    }
+
+    /* ── Answer Textarea ── */
+    .answer-section { margin-top: 1rem; }
+    .answer-section textarea {
+      min-height: 100px;
+      font-size: 0.875rem;
+    }
+
+    /* ── Evaluation Result ── */
+    .eval-result {
+      background: var(--ibm-gray-100);
+      border-left: 4px solid var(--ibm-blue);
+      padding: 1rem 1.25rem;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin-top: 1rem;
+      white-space: pre-wrap;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      display: none;
+    }
+    .eval-result.visible { display: block; }
+
+    /* ── AI Output Box ── */
+    .ai-output {
+      background: #f0f4ff;
+      border: 1px solid #b3c6ff;
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      font-size: 0.875rem;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .ai-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--ibm-blue);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ── Tips list ── */
+    .tips-list { padding-left: 1.25rem; }
+    .tips-list li { font-size: 0.85rem; line-height: 1.7; color: var(--ibm-gray-90); margin-bottom: 0.25rem; }
+
+    /* ── Grid ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--white);
+      border: 1px solid var(--ibm-gray-20);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--ibm-blue); }
+    .stat-label { font-size: 0.75rem; color: var(--ibm-gray-60); margin-top: 0.25rem; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 3px solid var(--ibm-gray-20);
+      border-top-color: var(--ibm-blue);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+    .spinner.visible { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem; right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .toast {
+      background: var(--ibm-gray-90);
+      color: var(--white);
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      max-width: 320px;
+      box-shadow: var(--shadow);
+      animation: slideIn 0.2s ease;
+    }
+    .toast.success { border-left: 4px solid var(--ibm-green); }
+    .toast.error { border-left: 4px solid var(--ibm-red); }
+    @keyframes slideIn { from { transform: translateX(40px); opacity:0 } to { transform: translateX(0); opacity:1 } }
+
+    /* ── File upload ── */
+    .file-drop {
+      border: 2px dashed var(--ibm-gray-20);
+      border-radius: var(--radius);
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .file-drop:hover, .file-drop.drag-over { border-color: var(--ibm-blue); background: var(--ibm-blue-light); }
+    .file-drop .drop-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .file-drop p { font-size: 0.875rem; color: var(--ibm-gray-60); }
+    .file-drop input[type="file"] { display: none; }
+
+    /* ── Progress bar ── */
+    .progress-bar {
+      height: 4px;
+      background: var(--ibm-gray-20);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--ibm-blue);
+      transition: width 0.3s ease;
+    }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; border-bottom: 2px solid var(--ibm-gray-20); margin-bottom: 1.5rem; }
+    .tab-btn {
+      padding: 0.625rem 1.25rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      color: var(--ibm-gray-60);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { color: var(--ibm-blue); border-bottom-color: var(--ibm-blue); font-weight: 600; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid var(--ibm-gray-20); margin: 1.5rem 0; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--ibm-gray-60);
+    }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .empty-state h3 { font-size: 1rem; font-weight: 600; color: var(--ibm-gray-90); margin-bottom: 0.5rem; }
+    .empty-state p { font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-brand">
+    <span class="ibm-logo">IBM</span>
+    <span>AICTE · Interview Trainer Agent</span>
+  </div>
+  <div class="header-status">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Connecting...</span>
+  </div>
+</header>
+
+<!-- ── Main Layout ── -->
+<div class="main-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section-label">Navigation</div>
+
+    <div class="nav-item active" onclick="showPage('home', this)">
+      <span class="nav-icon">🏠</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('session', this)">
+      <span class="nav-icon">👤</span> Create Session
+    </div>
+    <div class="nav-item" onclick="showPage('questions', this)">
+      <span class="nav-icon">❓</span> Question Bank
+    </div>
+    <div class="nav-item" onclick="showPage('practice', this)">
+      <span class="nav-icon">🎤</span> Practice & Evaluate
+    </div>
+    <div class="nav-item" onclick="showPage('strategy', this)">
+      <span class="nav-icon">📋</span> Prep Strategy
+    </div>
+    <div class="nav-item" onclick="showPage('model-answers', this)">
+      <span class="nav-icon">💡</span> Model Answers
+    </div>
+
+    <hr class="sidebar-divider">
+    <div class="sidebar-section-label">Resources</div>
+    <div class="nav-item" onclick="showPage('hr-guide', this)">
+      <span class="nav-icon">📖</span> HR Guide
+    </div>
+    <div class="nav-item" onclick="showPage('about', this)">
+      <span class="nav-icon">ℹ️</span> About
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <!-- Active session badge -->
+    <div class="session-badge" id="sessionBadge">
+      <strong id="badgeName">—</strong>
+      <span id="badgeRole">—</span> · <span id="badgeLevel">—</span>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <main class="content">
+
+    <!-- ── HOME ── -->
+    <div class="page active" id="page-home">
+      <div class="page-header">
+        <h1>Welcome to IBM AICTE Interview Trainer</h1>
+        <p>AI-powered interview preparation using IBM Granite (watsonx.ai) and RAG technology</p>
+      </div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-value" id="statDocs">—</div>
+          <div class="stat-label">Knowledge Base Docs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">IBM</div>
+          <div class="stat-label">Granite LLM (watsonx.ai)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">RAG</div>
+          <div class="stat-label">ChromaDB Vector Store</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statModel">—</div>
+          <div class="stat-label">Active Model</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🚀 Quick Start</div>
+              <div class="card-subtitle">Get interview-ready in minutes</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <ol class="tips-list" style="padding-left:1.5rem;">
+              <li style="margin-bottom:.75rem"><strong>Create Session</strong> — Enter your name, role, and experience level (optionally paste your resume)</li>
+              <li style="margin-bottom:.75rem"><strong>Generate Questions</strong> — Get a tailored question set powered by IBM Granite</li>
+              <li style="margin-bottom:.75rem"><strong>Practice & Evaluate</strong> — Submit your answers for AI-driven feedback</li>
+              <li style="margin-bottom:.75rem"><strong>Get Model Answers</strong> — See ideal responses crafted by the AI</li>
+              <li><strong>Build Your Strategy</strong> — Receive a personalized 30-day prep roadmap</li>
+            </ol>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="showPage('session', document.querySelector('.nav-item:nth-child(2))'))">
+                Start Now →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">⚡ System Status</div>
+              <div class="card-subtitle">IBM Cloud & RAG pipeline health</div>
+            </div>
+          </div>
+          <div class="card-body" id="healthCard">
+            <p style="color:var(--ibm-gray-60);font-size:.875rem">Checking system status...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🎯 Supported Roles</div>
+        </div>
+        <div class="card-body" id="rolesCard">
+          <p style="color:var(--ibm-gray-60);font-size:.875rem">Loading...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CREATE SESSION ── -->
+    <div class="page" id="page-session">
+      <div class="page-header">
+        <h1>Create Interview Session</h1>
+        <p>Tell us about yourself to receive a personalized experience</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">👤 Candidate Profile</div>
+        </div>
+        <div class="card-body">
+          <!-- Tabs -->
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-text', this)">📝 Text Input</button>
+            <button class="tab-btn" onclick="switchTab('tab-upload', this)">📄 Resume Upload</button>
+          </div>
+
+          <!-- Text Input Tab -->
+          <div class="tab-panel active" id="tab-text">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" id="candName" placeholder="e.g. Aryan Sharma" />
+              </div>
+              <div class="form-group">
+                <label>Target Role *</label>
+                <select id="candRole">
+                  <option value="">Select a role...</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Experience Level *</label>
+              <select id="candLevel">
+                <option value="fresher">Fresher (0–1 yr)</option>
+                <option value="junior">Junior (1–3 yrs)</option>
+                <option value="mid-level" selected>Mid-Level (3–6 yrs)</option>
+                <option value="senior">Senior (6–10 yrs)</option>
+                <option value="lead">Lead (10–15 yrs)</option>
+                <option value="principal">Principal (15+ yrs)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Resume / Job Description (optional)</label>
+              <textarea id="candResume" placeholder="Paste your resume text, LinkedIn summary, or job description here for personalized questions..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="createSession()" id="createBtn">
+              <span class="spinner" id="createSpinner"></span>
+              Create Session
+            </button>
+          </div>
+
+          <!-- Upload Tab -->
+          <div class="tab-panel" id="tab-upload">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" id="uploadName" placeholder="e.g. Aryan Sharma" />
+              </div>
+              <div class="form-group">
+                <label>Target Role *</label>
+                <select id="uploadRole"></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Experience Level *</label>
+              <select id="uploadLevel">
+                <option value="fresher">Fresher</option>
+                <option value="junior">Junior</option>
+                <option value="mid-level" selected>Mid-Level</option>
+                <option value="senior">Senior</option>
+                <option value="lead">Lead</option>
+                <option value="principal">Principal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Resume File (PDF, DOCX, TXT — max 5 MB)</label>
+              <div class="file-drop" id="fileDrop" onclick="document.getElementById('resumeFile').click()">
+                <div class="drop-icon">📄</div>
+                <p id="fileDropText">Click to select or drag & drop your resume</p>
+                <input type="file" id="resumeFile" accept=".pdf,.docx,.txt" onchange="handleFileSelect(this)" />
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="createSessionWithUpload()" id="uploadBtn">
+              <span class="spinner" id="uploadSpinner"></span>
+              Upload & Create Session
+            </button>
+          </div>
+
+          <!-- Session result -->
+          <div id="sessionResult" style="display:none; margin-top:1.5rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── QUESTION BANK ── -->
+    <div class="page" id="page-questions">
+      <div class="page-header">
+        <h1>Question Bank</h1>
+        <p>AI-generated + curated role-specific interview questions</p>
+      </div>
+
+      <div id="noSessionQ" class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <h3>No Active Session</h3>
+        <p>Create a session first to generate personalized questions.</p>
+        <div class="btn-group" style="justify-content:center; margin-top:1rem;">
+          <button class="btn btn-primary" onclick="showPage('session', null)">Create Session</button>
+        </div>
+      </div>
+
+      <div id="questionControls" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🤖 Generate Questions</div>
+          </div>
+          <div class="card-body">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Number of Questions</label>
+                <select id="numQuestions">
+                  <option value="5">5 Questions</option>
+                  <option value="10" selected>10 Questions</option>
+                  <option value="15">15 Questions</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Include Behavioral</label>
+                <select id="includeBehavioral">
+                  <option value="true" selected>Yes</option>
+                  <option value="false">No — Technical Only</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="generateQuestions()" id="genBtn">
+              <span class="spinner" id="genSpinner"></span>
+              🎯 Generate with IBM Granite
+            </button>
+          </div>
+        </div>
+
+        <div id="questionsOutput" style="display:none;">
+          <!-- AI Questions -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🤖 AI-Generated Questions (IBM Granite)</div>
+            </div>
+            <div class="card-body">
+              <div class="ai-label">🔵 IBM watsonx.ai · Granite</div>
+              <div class="ai-output" id="aiQuestionsOutput"></div>
+            </div>
+          </div>
+
+          <!-- Curated Technical Questions -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📚 Curated Technical Questions</div>
+            </div>
+            <div class="card-body" id="curatedQuestionsContainer"></div>
+          </div>
+
+          <!-- Curated Behavioral Questions -->
+          <div class="card" id="behavioralCard">
+            <div class="card-header">
+              <div class="card-title">🎭 Behavioral Questions (STAR Framework)</div>
+            </div>
+            <div class="card-body" id="behavioralQuestionsContainer"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PRACTICE & EVALUATE ── -->
+    <div class="page" id="page-practice">
+      <div class="page-header">
+        <h1>Practice & Evaluate</h1>
+        <p>Submit your answer to any question and get instant AI feedback</p>
+      </div>
+
+      <div id="noSessionP" class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <h3>No Active Session</h3>
+        <p>Create a session first to start practicing.</p>
+      </div>
+
+      <div id="practicePanel" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">✍️ Answer Evaluator</div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Interview Question</label>
+              <textarea id="evalQuestion" placeholder="Enter or paste the interview question here..." style="min-height:80px;"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Your Answer</label>
+              <textarea id="evalAnswer" placeholder="Type your answer here. Be detailed — the AI evaluates depth, clarity, examples, and role-fit..." style="min-height:150px;"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="evaluateAnswer()" id="evalBtn">
+              <span class="spinner" id="evalSpinner"></span>
+              📊 Evaluate Answer
+            </button>
+          </div>
+        </div>
+
+        <div class="card" id="evalResultCard" style="display:none;">
+          <div class="card-header">
+            <div class="card-title">📊 Evaluation Feedback</div>
+          </div>
+          <div class="card-body">
+            <div class="ai-label">🔵 IBM watsonx.ai · Granite Analysis</div>
+            <div class="ai-output" id="evalOutput"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PREP STRATEGY ── -->
+    <div class="page" id="page-strategy">
+      <div class="page-header">
+        <h1>Preparation Strategy</h1>
+        <p>Your personalized 30-day interview readiness roadmap</p>
+      </div>
+
+      <div id="noSessionS" class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <h3>No Active Session</h3>
+        <p>Create a session first to generate your strategy.</p>
+      </div>
+
+      <div id="strategyPanel" style="display:none;">
+        <button class="btn btn-primary" onclick="getStrategy()" id="stratBtn" style="margin-bottom:1.5rem;">
+          <span class="spinner" id="stratSpinner"></span>
+          🗺️ Generate My Preparation Strategy
+        </button>
+
+        <div id="strategyOutput" style="display:none;">
+          <!-- AI Strategy -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🤖 AI Preparation Roadmap (IBM Granite)</div>
+            </div>
+            <div class="card-body">
+              <div class="ai-label">🔵 IBM watsonx.ai · Granite</div>
+              <div class="ai-output" id="aiStrategyOutput"></div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <!-- Expectations -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">📌 Level Expectations</div></div>
+              <div class="card-body"><ul class="tips-list" id="expectationsList"></ul></div>
+            </div>
+            <!-- Focus Areas -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">🎯 Focus Areas</div></div>
+              <div class="card-body" id="focusAreasList"></div>
+            </div>
+          </div>
+
+          <!-- HR Do's / Don'ts -->
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header"><div class="card-title">✅ Interview Do's</div></div>
+              <div class="card-body"><ul class="tips-list" id="dosList"></ul></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">❌ Interview Don'ts</div></div>
+              <div class="card-body"><ul class="tips-list" id="dontsList"></ul></div>
+            </div>
+          </div>
+
+          <!-- Salary tip -->
+          <div class="card">
+            <div class="card-header"><div class="card-title">💰 Salary Negotiation Tip</div></div>
+            <div class="card-body"><p id="salaryTip" style="font-size:.9rem;line-height:1.7;"></p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODEL ANSWERS ── -->
+    <div class="page" id="page-model-answers">
+      <div class="page-header">
+        <h1>Model Answers</h1>
+        <p>Get the ideal answer for any interview question</p>
+      </div>
+
+      <div id="noSessionM" class="empty-state">
+        <div class="empty-icon">🔒</div>
+        <h3>No Active Session</h3>
+        <p>Create a session first to get model answers.</p>
+      </div>
+
+      <div id="modelPanel" style="display:none;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">💡 Get Model Answer</div></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Interview Question</label>
+              <textarea id="modelQuestion" placeholder="Enter the question you want a model answer for..." style="min-height:80px;"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="getModelAnswer()" id="modelBtn">
+              <span class="spinner" id="modelSpinner"></span>
+              💡 Generate Model Answer
+            </button>
+          </div>
+        </div>
+
+        <div class="card" id="modelResultCard" style="display:none;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">💡 Model Answer</div>
+              <div class="card-subtitle" id="modelSource"></div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="ai-output" id="modelOutput"></div>
+            <div id="modelTips" style="display:none; margin-top:1rem;">
+              <hr class="divider">
+              <strong style="font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ibm-gray-60);">💡 Pro Tip</strong>
+              <p id="modelTipsText" style="font-size:.875rem;line-height:1.7;margin-top:.5rem;"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HR GUIDE ── -->
+    <div class="page" id="page-hr-guide">
+      <div class="page-header">
+        <h1>HR Interview Guide</h1>
+        <p>Best practices, dos & don'ts, and salary negotiation tips</p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">✅ Always Do</div></div>
+          <div class="card-body">
+            <ul class="tips-list">
+              <li>Research the company thoroughly: mission, products, recent news</li>
+              <li>Prepare 3–5 STAR stories for behavioral questions</li>
+              <li>Quantify achievements (%, $, user counts, time saved)</li>
+              <li>Prepare 3–5 thoughtful questions for your interviewers</li>
+              <li>Send a thank-you email within 24 hours</li>
+              <li>Dress appropriately for the company culture</li>
+              <li>Arrive or log in early (10 min / 5 min virtual)</li>
+              <li>Bring copies of your resume and portfolio/GitHub link</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">❌ Never Do</div></div>
+          <div class="card-body">
+            <ul class="tips-list">
+              <li>Speak negatively about previous employers or colleagues</li>
+              <li>Exaggerate or fabricate experience</li>
+              <li>Interrupt the interviewer</li>
+              <li>Ask about salary/benefits in the first round (unless asked)</li>
+              <li>Give one-word answers — always elaborate with context</li>
+              <li>Check your phone during the interview</li>
+              <li>Ask questions easily answered by the company website</li>
+              <li>Show disinterest or appear unprepared</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">💰 Salary Negotiation</div></div>
+          <div class="card-body">
+            <ul class="tips-list">
+              <li>Let the employer make the first offer if possible</li>
+              <li>Counter with a range where your target is at the lower end</li>
+              <li>Justify with market data (Levels.fyi, Glassdoor, LinkedIn Salary)</li>
+              <li>Consider the full package: equity, bonus, PTO, remote, L&D budget</li>
+              <li>Get the offer in writing before resigning</li>
+              <li>It's always acceptable to ask for 24–48 hours to review</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">💻 Virtual Interview Tips</div></div>
+          <div class="card-body">
+            <ul class="tips-list">
+              <li>Test your internet, camera, and microphone beforehand</li>
+              <li>Use a quiet, well-lit space with a neutral background</li>
+              <li>Look at the camera, not the screen, when speaking</li>
+              <li>Keep water nearby and notes out of camera frame</li>
+              <li>Close unnecessary browser tabs and notifications</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📚 Improvement Tips</div></div>
+        <div class="card-body">
+          <div class="grid-2">
+            <div>
+              <strong style="font-size:.8rem;text-transform:uppercase;color:var(--ibm-gray-60);letter-spacing:.05em;">Communication</strong>
+              <ul class="tips-list" style="margin-top:.5rem;">
+                <li>Practice the Feynman Technique</li>
+                <li>Record yourself and review the playback</li>
+                <li>Use STAR framework for every behavioral answer</li>
+              </ul>
+            </div>
+            <div>
+              <strong style="font-size:.8rem;text-transform:uppercase;color:var(--ibm-gray-60);letter-spacing:.05em;">Technical</strong>
+              <ul class="tips-list" style="margin-top:.5rem;">
+                <li>Solve 2–3 LeetCode problems daily</li>
+                <li>Read "Designing Data-Intensive Applications"</li>
+                <li>Write a technical blog post monthly</li>
+              </ul>
+            </div>
+            <div>
+              <strong style="font-size:.8rem;text-transform:uppercase;color:var(--ibm-gray-60);letter-spacing:.05em;">Confidence</strong>
+              <ul class="tips-list" style="margin-top:.5rem;">
+                <li>Mock interviews on Pramp / interviewing.io</li>
+                <li>Prepare the 20 most common questions</li>
+                <li>Reframe nervousness as excitement</li>
+              </ul>
+            </div>
+            <div>
+              <strong style="font-size:.8rem;text-transform:uppercase;color:var(--ibm-gray-60);letter-spacing:.05em;">Research</strong>
+              <ul class="tips-list" style="margin-top:.5rem;">
+                <li>Set up Google Alerts for the target company</li>
+                <li>Follow the engineering blog and LinkedIn</li>
+                <li>Review recent earnings calls / press releases</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ABOUT ── -->
+    <div class="page" id="page-about">
+      <div class="page-header">
+        <h1>About This Project</h1>
+        <p>IBM AICTE Problem Statement No.22 — Interview Trainer Agent</p>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="grid-2">
+            <div>
+              <h3 style="margin-bottom:1rem;font-size:1rem;">🏗️ Architecture</h3>
+              <ul class="tips-list">
+                <li><strong>LLM:</strong> IBM Granite via watsonx.ai (IBM Cloud Lite)</li>
+                <li><strong>RAG:</strong> ChromaDB vector store + sentence-transformers</li>
+                <li><strong>Embeddings:</strong> all-MiniLM-L6-v2 (local, free)</li>
+                <li><strong>Backend:</strong> FastAPI (Python 3.11+)</li>
+                <li><strong>Frontend:</strong> Vanilla HTML/CSS/JS (zero dependencies)</li>
+                <li><strong>Resume Parsing:</strong> PyPDF + python-docx + NLU heuristics</li>
+              </ul>
+            </div>
+            <div>
+              <h3 style="margin-bottom:1rem;font-size:1rem;">✨ Features</h3>
+              <ul class="tips-list">
+                <li>Tailored question generation per role & experience level</li>
+                <li>AI answer evaluation with scores and improvement tips</li>
+                <li>Model answers retrieved from knowledge base + Granite</li>
+                <li>30-day personalized preparation roadmap</li>
+                <li>Resume parsing (PDF, DOCX, TXT) for skill extraction</li>
+                <li>Curated knowledge base with 50+ role-specific questions</li>
+                <li>HR guidelines, behavioral frameworks, salary tips</li>
+              </ul>
+            </div>
+          </div>
+          <hr class="divider">
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+            <span class="badge badge-blue">IBM Cloud Lite</span>
+            <span class="badge badge-green">IBM Granite</span>
+            <span class="badge badge-purple">watsonx.ai</span>
+            <span class="badge badge-teal">RAG</span>
+            <span class="badge badge-blue">ChromaDB</span>
+            <span class="badge badge-green">FastAPI</span>
+            <span class="badge badge-purple">AICTE Problem #22</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  const API = '';  // same-origin; change to 'http://localhost:8000' for dev
+  let currentSessionId = null;
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  function showPage(page, navEl) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    if (navEl) navEl.classList.add('active');
+    else {
+      // Highlight correct nav item
+      document.querySelectorAll('.nav-item').forEach(n => {
+        if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + page + "'"))
+          n.classList.add('active');
+      });
+    }
+    updateSessionDependentPanels();
+  }
+
+  function switchTab(tabId, btnEl) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btnEl.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btnEl.classList.add('active');
+  }
+
+  function updateSessionDependentPanels() {
+    const has = !!currentSessionId;
+    const togglePair = (noEl, yesEl) => {
+      if (!document.getElementById(noEl)) return;
+      document.getElementById(noEl).style.display = has ? 'none' : 'block';
+      document.getElementById(yesEl).style.display = has ? 'block' : 'none';
+    };
+    togglePair('noSessionQ', 'questionControls');
+    togglePair('noSessionP', 'practicePanel');
+    togglePair('noSessionS', 'strategyPanel');
+    togglePair('noSessionM', 'modelPanel');
+  }
+
+  // ── Health check ──────────────────────────────────────────────────────────
+
+  async function checkHealth() {
+    try {
+      const r = await fetch(API + '/api/health');
+      const d = await r.json();
+      document.getElementById('statusDot').style.background = '#198038';
+      document.getElementById('statusText').textContent = 'System Online';
+      document.getElementById('statDocs').textContent = d.knowledge_base_documents;
+      document.getElementById('statModel').textContent = d.ibm_granite_model.split('/').pop();
+      document.getElementById('healthCard').innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;">
+            <span>RAG Pipeline</span><span class="badge badge-green">✓ Ready</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;">
+            <span>Vector Store</span><span class="badge badge-green">✓ ${d.vector_store}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;">
+            <span>Knowledge Base</span><span class="badge badge-blue">${d.knowledge_base_documents} docs</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;">
+            <span>IBM Granite Model</span><span class="badge badge-purple">${d.ibm_granite_model}</span>
+          </div>
+        </div>`;
+    } catch (e) {
+      document.getElementById('statusDot').style.background = '#da1e28';
+      document.getElementById('statusText').textContent = 'Server offline';
+      document.getElementById('healthCard').innerHTML = `
+        <p style="color:var(--ibm-red);font-size:.875rem;">⚠️ Cannot reach the API server. Make sure it is running on port 8000.</p>`;
+    }
+  }
+
+  async function loadRoles() {
+    try {
+      const r = await fetch(API + '/api/roles');
+      const d = await r.json();
+      const opts = d.roles.map(role => `<option value="${role}">${role}</option>`).join('');
+      ['candRole', 'uploadRole'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<option value="">Select a role...</option>` + opts;
+      });
+      document.getElementById('rolesCard').innerHTML = d.roles.map(
+        r => `<span class="badge badge-blue" style="margin:.2rem;">${r}</span>`
+      ).join('');
+    } catch (e) { /* silent */ }
+  }
+
+  // ── Session ───────────────────────────────────────────────────────────────
+
+  async function createSession() {
+    const name = document.getElementById('candName').value.trim();
+    const role = document.getElementById('candRole').value;
+    const level = document.getElementById('candLevel').value;
+    const resume = document.getElementById('candResume').value;
+    if (!name || !role) return toast('Please fill in Name and Role.', 'error');
+
+    setLoading('createBtn', 'createSpinner', true);
+    try {
+      const r = await fetch(API + '/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, role, experience_level: level, resume_text: resume || null })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Failed');
+      currentSessionId = d.session_id;
+      updateSessionBadge(d.name, d.role, d.experience_level);
+      renderSessionResult(d);
+      toast('Session created for ' + d.name + '!', 'success');
+      updateSessionDependentPanels();
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+    } finally {
+      setLoading('createBtn', 'createSpinner', false);
+    }
+  }
+
+  async function createSessionWithUpload() {
+    const name = document.getElementById('uploadName').value.trim();
+    const role = document.getElementById('uploadRole').value;
+    const level = document.getElementById('uploadLevel').value;
+    const file = document.getElementById('resumeFile').files[0];
+    if (!name || !role) return toast('Please fill in Name and Role.', 'error');
+
+    setLoading('uploadBtn', 'uploadSpinner', true);
+    try {
+      const fd = new FormData();
+      fd.append('name', name);
+      fd.append('role', role);
+      fd.append('experience_level', level);
+      if (file) fd.append('resume', file);
+
+      const endpoint = file ? '/api/sessions/upload' : '/api/sessions';
+      const r = file
+        ? await fetch(API + endpoint, { method: 'POST', body: fd })
+        : await fetch(API + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, role, experience_level: level })
+          });
+
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Failed');
+      currentSessionId = d.session_id;
+      updateSessionBadge(d.name, d.role, d.experience_level);
+      renderSessionResult(d);
+      toast('Resume parsed! Session created for ' + d.name, 'success');
+      updateSessionDependentPanels();
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+    } finally {
+      setLoading('uploadBtn', 'uploadSpinner', false);
+    }
+  }
+
+  function renderSessionResult(d) {
+    const div = document.getElementById('sessionResult');
+    div.style.display = 'block';
+    div.innerHTML = `
+      <div style="background:#defbe6;border:1px solid #a7f0ba;border-radius:4px;padding:1rem 1.25rem;">
+        <strong style="color:#198038;">✅ Session Created</strong>
+        <div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.875rem;">
+          <div><strong>ID:</strong> <code style="font-size:.8rem;">${d.session_id}</code></div>
+          <div><strong>Role:</strong> ${d.role}</div>
+          <div><strong>Level:</strong> ${d.experience_level}</div>
+          <div><strong>Tech Skills Found:</strong> ${d.tech_skills.length > 0 ? d.tech_skills.slice(0,6).join(', ') : 'None detected'}</div>
+        </div>
+        ${d.tech_skills.length > 0 ? `<div style="margin-top:.75rem;">${d.tech_skills.map(s=>`<span class="badge badge-blue" style="margin:.15rem;">${s}</span>`).join('')}</div>` : ''}
+        <div style="margin-top:1rem;display:flex;gap:.75rem;">
+          <button class="btn btn-primary btn-sm" onclick="showPage('questions', null)" style="padding:.4rem .9rem;font-size:.8rem;">Generate Questions →</button>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('strategy', null)" style="padding:.4rem .9rem;font-size:.8rem;">Get Strategy</button>
+        </div>
+      </div>`;
+  }
+
+  function updateSessionBadge(name, role, level) {
+    document.getElementById('badgeName').textContent = name;
+    document.getElementById('badgeRole').textContent = role;
+    document.getElementById('badgeLevel').textContent = level;
+    document.getElementById('sessionBadge').classList.add('visible');
+  }
+
+  // ── Questions ─────────────────────────────────────────────────────────────
+
+  async function generateQuestions() {
+    const num = parseInt(document.getElementById('numQuestions').value);
+    const behavioral = document.getElementById('includeBehavioral').value === 'true';
+    setLoading('genBtn', 'genSpinner', true);
+    try {
+      const r = await fetch(API + '/api/questions/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: currentSessionId, num_questions: num, include_behavioral: behavioral })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail);
+      renderQuestions(d);
+      document.getElementById('questionsOutput').style.display = 'block';
+      toast('Questions generated!', 'success');
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+    } finally {
+      setLoading('genBtn', 'genSpinner', false);
+    }
+  }
+
+  function renderQuestions(d) {
+    document.getElementById('aiQuestionsOutput').textContent = d.ai_generated_questions;
+
+    // Curated technical
+    const techContainer = document.getElementById('curatedQuestionsContainer');
+    if (d.curated_technical_questions.length === 0) {
+      techContainer.innerHTML = '<p style="color:var(--ibm-gray-60);font-size:.875rem;">No curated questions available for this role in the knowledge base.</p>';
+    } else {
+      techContainer.innerHTML = d.curated_technical_questions.map((q, i) => renderQuestionCard(q, i + 1)).join('');
+    }
+
+    // Behavioral
+    const behContainer = document.getElementById('behavioralQuestionsContainer');
+    if (d.curated_behavioral_questions.length > 0) {
+      document.getElementById('behavioralCard').style.display = 'block';
+      behContainer.innerHTML = d.curated_behavioral_questions.map((q, i) =>
+        renderBehavioralCard(q, i + 1)
+      ).join('');
+    } else {
+      document.getElementById('behavioralCard').style.display = 'none';
+    }
+  }
+
+  function renderQuestionCard(q, num) {
+    const diffBadge = { easy: 'badge-green', intermediate: 'badge-blue', hard: 'badge-red', senior: 'badge-red' };
+    const catBadge = { technical: 'badge-teal', system_design: 'badge-purple', behavioral: 'badge-blue' };
+    return `
+      <div class="question-card">
+        <div class="question-header">
+          <span class="question-number">${num}</span>
+          <div style="flex:1;">
+            <div class="question-text">${escHtml(q.question)}</div>
+            <div class="question-meta">
+              <span class="badge ${catBadge[q.category] || 'badge-blue'}">${q.category || 'technical'}</span>
+              <span class="badge ${diffBadge[q.difficulty] || 'badge-blue'}">${q.difficulty || 'intermediate'}</span>
+            </div>
+          </div>
+          <button class="question-toggle" onclick="toggleAnswer(this)">▼</button>
+        </div>
+        <div class="question-body">
+          <strong style="font-size:.8rem;text-transform:uppercase;color:var(--ibm-gray-60);">Model Answer</strong>
+          <p style="margin-top:.5rem;font-size:.875rem;line-height:1.8;">${escHtml(q.model_answer || '')}</p>
+          ${q.tips ? `<hr class="divider"><strong style="font-size:.8rem;text-transform:uppercase;color:var(--ibm-gray-60);">💡 Tip</strong><p style="margin-top:.5rem;font-size:.85rem;line-height:1.7;color:var(--ibm-gray-60);">${escHtml(q.tips)}</p>` : ''}
+          <div style="margin-top:1rem;">
+            <button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .8rem;" onclick="prefillPractice('${escAttr(q.question)}')">✍️ Practice This</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderBehavioralCard(q, num) {
+    return `
+      <div class="question-card">
+        <div class="question-header">
+          <span class="question-number" style="background:var(--ibm-purple);">${num}</span>
+          <div style="flex:1;">
+            <div class="question-text">${escHtml(q.question)}</div>
+            <div class="question-meta">
+              <span class="badge badge-purple">behavioral</span>
+              ${q.framework ? `<span class="badge badge-teal">${q.framework}</span>` : ''}
+            </div>
+          </div>
+          <button class="question-toggle" onclick="toggleAnswer(this)">▼</button>
+        </div>
+        <div class="question-body">
+          <strong style="font-size:.8rem;text-transform:uppercase;color:var(--ibm-gray-60);">Guidance</strong>
+          <p style="margin-top:.5rem;font-size:.875rem;line-height:1.8;">${escHtml(q.model_answer || '')}</p>
+          ${q.tips ? `<hr class="divider"><strong style="font-size:.8rem;text-transform:uppercase;color:var(--ibm-gray-60);">💡 Tip</strong><p style="margin-top:.5rem;font-size:.85rem;line-height:1.7;color:var(--ibm-gray-60);">${escHtml(q.tips)}</p>` : ''}
+          <div style="margin-top:1rem;">
+            <button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .8rem;" onclick="prefillPractice('${escAttr(q.question)}')">✍️ Practice This</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function toggleAnswer(btn) {
+    const body = btn.closest('.question-card').querySelector('.question-body');
+    const expanded = body.classList.toggle('expanded');
+    btn.textContent = expanded ? '▲' : '▼';
+  }
+
+  function prefillPractice(question) {
+    document.getElementById('evalQuestion').value = question;
+    showPage('practice', null);
+  }
+
+  // ── Evaluate ──────────────────────────────────────────────────────────────
+
+  async function evaluateAnswer() {
+    const question = document.getElementById('evalQuestion').value.trim();
+    const answer = document.getElementById('evalAnswer').value.trim();
+    if (!question || !answer) return toast('Please fill in both the question and your answer.', 'error');
+
+    setLoading('evalBtn', 'evalSpinner', true);
+    try {
+      const r = await fetch(API + '/api/answers/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: currentSessionId, question, candidate_answer: answer })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail);
+      document.getElementById('evalOutput').textContent = d.evaluation;
+      document.getElementById('evalResultCard').style.display = 'block';
+      toast('Answer evaluated!', 'success');
+      document.getElementById('evalResultCard').scrollIntoView({ behavior: 'smooth' });
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+    } finally {
+      setLoading('evalBtn', 'evalSpinner', false);
+    }
+  }
+
+  // ── Strategy ──────────────────────────────────────────────────────────────
+
+  async function getStrategy() {
+    setLoading('stratBtn', 'stratSpinner', true);
+    try {
+      const r = await fetch(API + '/api/strategy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: currentSessionId })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail);
+      document.getElementById('aiStrategyOutput').textContent = d.ai_strategy;
+      renderList('expectationsList', d.experience_expectations);
+      document.getElementById('focusAreasList').innerHTML = (d.focus_areas || []).map(
+        f => `<span class="badge badge-teal" style="margin:.2rem;">${f}</span>`
+      ).join('');
+      renderList('dosList', d.hr_dos);
+      renderList('dontsList', d.hr_donts);
+      document.getElementById('salaryTip').textContent = d.salary_tip;
+      document.getElementById('strategyOutput').style.display = 'block';
+      toast('Preparation strategy generated!', 'success');
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+    } finally {
+      setLoading('stratBtn', 'stratSpinner', false);
+    }
+  }
+
+  // ── Model Answer ──────────────────────────────────────────────────────────
+
+  async function getModelAnswer() {
+    const question = document.getElementById('modelQuestion').value.trim();
+    if (!question) return toast('Please enter a question.', 'error');
+
+    setLoading('modelBtn', 'modelSpinner', true);
+    try {
+      const r = await fetch(API + '/api/answers/model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: currentSessionId, question })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail);
+      document.getElementById('modelOutput').textContent = d.model_answer;
+      document.getElementById('modelSource').textContent =
+        d.source === 'knowledge_base' ? '📚 Source: Knowledge Base' : '🤖 Source: IBM Granite';
+      if (d.tips) {
+        document.getElementById('modelTipsText').textContent = d.tips;
+        document.getElementById('modelTips').style.display = 'block';
+      }
+      document.getElementById('modelResultCard').style.display = 'block';
+      toast('Model answer ready!', 'success');
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+    } finally {
+      setLoading('modelBtn', 'modelSpinner', false);
+    }
+  }
+
+  // ── Utilities ─────────────────────────────────────────────────────────────
+
+  function handleFileSelect(input) {
+    const file = input.files[0];
+    if (file) {
+      document.getElementById('fileDropText').textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    }
+  }
+
+  function renderList(elId, items) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.innerHTML = (items || []).map(i => `<li>${escHtml(i)}</li>`).join('');
+  }
+
+  function setLoading(btnId, spinnerId, loading) {
+    const btn = document.getElementById(btnId);
+    const sp = document.getElementById(spinnerId);
+    if (btn) btn.disabled = loading;
+    if (sp) sp.classList.toggle('visible', loading);
+  }
+
+  function toast(msg, type = 'success') {
+    const tc = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    tc.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(s) {
+    return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+
+  checkHealth();
+  loadRoles();
+</script>
+</body>
+</html>

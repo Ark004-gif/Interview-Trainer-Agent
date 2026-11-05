@@ -1,0 +1,31 @@
+# Secrets - NEVER commit
+.env
+
+# Virtual environment
+venv/
+
+# Auto-generated data
+data/chroma_db/
+data/uploads/
+
+# Logs
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE / tools
+.bob/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp helper scripts
+_patch_granite.py
+_fix_encoding.py
